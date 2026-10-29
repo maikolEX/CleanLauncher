@@ -56,6 +56,7 @@ public class GreeterService extends Service {
         f.addAction("com.bt.ACTION_BT_MUSIC_PLAY");
         f.addAction("com.bt.ACTION_BT_MUSIC_PAUSE");
         f.addAction("com.simple.carlauncher.TEST_CAR_ON"); // adb test hook
+        f.addAction(android.content.Intent.ACTION_SCREEN_ON); // head unit waking from sleep
         registerReceiver(events, f);
         // Right after boot, bring the last source back and greet. A plain restart of this app
         // (update, crash) must not touch the audio.
@@ -87,6 +88,8 @@ public class GreeterService extends Service {
                 Log.d(TAG, "mcu_state=" + state);
                 if (state == 3) onCarOff();
                 else if (state == 1) onCarOn();
+            } else if (android.content.Intent.ACTION_SCREEN_ON.equals(a)) {
+                markWake();
             } else if ("com.simple.carlauncher.TEST_CAR_ON".equals(a)) {
                 onCarOn();
             } else if ("com.bt.ACTION_BT_MUSIC_PAUSE".equals(a)) {
@@ -126,9 +129,16 @@ public class GreeterService extends Service {
         Log.d(TAG, "car off, last source=" + src);
     }
 
-    private void onCarOn() {
-        // GHOST GOLD boot animation on the home screen (if it is showing).
+    /** When the car (ACC) or the screen last came on; the home screen plays its intro after it. */
+    static volatile long wokeAt;
+
+    private void markWake() {
+        wokeAt = android.os.SystemClock.elapsedRealtime();
         sendBroadcast(new Intent(MainActivity.ACTION_BOOT).setPackage(getPackageName()));
+    }
+
+    private void onCarOn() {
+        markWake(); // GHOST GOLD boot animation
         handler.postDelayed(this::restoreAudio, 3000);
         schedule();
     }

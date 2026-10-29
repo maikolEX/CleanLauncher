@@ -39,6 +39,9 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
 
     /** The boot animation plays once per process start (head unit boot) and on ACC on. */
     private static boolean bootShown;
+    private static long lastBootAt;
+    private static final String TPMS = "com.nwd.can.setting/.ui.MainActivity";
+    private static final long AUTO_SHOWROOM_MS = 2 * 60 * 1000;
 
     private final Handler handler = new Handler();
     private final RadioClient radio = new RadioClient();
@@ -51,6 +54,9 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
     private TruckView truck;
     private final List<View> chrome = new ArrayList<>(); // everything that hides in showroom
     private boolean showroom;
+    private View rail, railHair;
+    private TextView showroomTitle, showroomLabel;
+    private long lastTouch = SystemClock.elapsedRealtime();
 
     private TextView greeting, weatherTemp, weatherDesc, weatherCity;
     private ImageView weatherIcon;
@@ -78,8 +84,10 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         root.setBackground(Ui.background(this));
 
         LinearLayout row = new LinearLayout(this);
-        row.addView(buildRail(), new LinearLayout.LayoutParams(dp(92), -1));
+        rail = buildRail();
+        row.addView(rail, new LinearLayout.LayoutParams(dp(92), -1));
         View hair = new View(this);
+        railHair = hair;
         hair.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 new int[]{0x00D4AF37, 0x80D4AF37, 0x80D4AF37, 0x00D4AF37}));
         LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(dp(1), -1);
@@ -133,6 +141,7 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         items.addView(railItem(R.drawable.ic_apps, "Apps",
                 () -> startActivity(new Intent(this, AppsActivity.class)), null));
         items.addView(railItem(R.drawable.ic_eq, "Sonido", this::openEqualizer, null));
+        items.addView(railItem(R.drawable.ic_car, "Showroom", this::toggleShowroom, null));
         items.addView(railItem(R.drawable.ic_settings, "Ajustes",
                 () -> startActivity(new Intent(this, SetupActivity.class)), this::openSystemSettings));
         rail.addView(items, new LinearLayout.LayoutParams(-1, 0, 1f));
@@ -191,6 +200,23 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         s.addView(chrome(buildRadio()), at(Gravity.END | Gravity.CENTER_VERTICAL, 0, 0, 36, 90));
         s.addView(chrome(buildMusic()), at(Gravity.END | Gravity.BOTTOM, 0, 0, 36, 58));
         s.addView(chrome(buildStatus()), at(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0, 0, 20));
+
+        // Showroom caption (only visible in showroom).
+        LinearLayout cap = column();
+        cap.setGravity(Gravity.CENTER_HORIZONTAL);
+        showroomLabel = Gg.label(this, "Showroom");
+        showroomLabel.setTextColor(Gg.GOLD);
+        showroomLabel.setLetterSpacing(0.5f);
+        cap.addView(showroomLabel);
+        showroomTitle = Gg.label(this, "Dongfeng Rich 6");
+        showroomTitle.setTextSize(22);
+        showroomTitle.setLetterSpacing(0.35f);
+        showroomTitle.setTextColor(Gg.TEXT);
+        showroomTitle.setPadding(0, dp(10), 0, 0);
+        cap.addView(showroomTitle);
+        cap.setAlpha(0f);
+        cap.setTag("caption");
+        s.addView(cap, at(Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 40, 0, 0));
         return s;
     }
 
@@ -365,8 +391,53 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         odometer = Gg.body(this, "", 20, Gg.TEXT);
         odometer.setPadding(0, dp(4), 0, 0);
         c.addView(odometer);
+        c.addView(buildTires(), new LinearLayout.LayoutParams(-2, -2));
         Ui.pressable(c, 0.97f);
         c.setOnClickListener(v2 -> startActivity(new Intent(this, OilActivity.class)));
+        return c;
+    }
+
+    /** Tyre pressure: the radio's CAN box knows it; until we can read it, open its TPMS screen. */
+    private View buildTires() {
+        LinearLayout c = column();
+        c.setPadding(0, dp(18), 0, 0);
+        c.addView(Gg.label(this, "Llantas · TPMS"));
+        LinearLayout grid = new LinearLayout(this);
+        grid.setGravity(Gravity.CENTER_VERTICAL);
+        grid.setPadding(0, dp(8), 0, 0);
+        // Four tyres seen from above: front pair, then rear pair.
+        LinearLayout car = new LinearLayout(this);
+        car.setOrientation(LinearLayout.VERTICAL);
+        for (int axle = 0; axle < 2; axle++) {
+            LinearLayout pair = new LinearLayout(this);
+            for (int side = 0; side < 2; side++) {
+                View t = new View(this);
+                GradientDrawable g = new GradientDrawable();
+                g.setCornerRadius(dp(3));
+                g.setStroke(dp(1), Gg.GOLD);
+                g.setColor(Gg.SURFACE);
+                t.setBackground(g);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(10), dp(18));
+                lp.setMargins(side == 0 ? 0 : dp(16), axle == 0 ? 0 : dp(8), 0, 0);
+                pair.addView(t, lp);
+            }
+            car.addView(pair);
+        }
+        grid.addView(car);
+        TextView t = Gg.body(this, "Ver presión", 16, Gg.TEXT);
+        t.setPadding(dp(14), 0, 0, 0);
+        grid.addView(t);
+        c.addView(grid);
+        Ui.pressable(c, 0.96f);
+        c.setOnClickListener(v -> {
+            try {
+                Intent i = new Intent(Intent.ACTION_MAIN);
+                i.setComponent(android.content.ComponentName.unflattenFromString(TPMS));
+                startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception e) {
+                toast("No se encontró la pantalla de TPMS del radio");
+            }
+        });
         return c;
     }
 
@@ -499,8 +570,28 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
 
     private void toggleShowroom() {
         showroom = !showroom;
+        lastTouch = SystemClock.elapsedRealtime();
         truck.setShowroom(showroom);
-        for (View v : chrome) v.animate().alpha(showroom ? 0f : 1f).setDuration(700).start();
+        DecelerateInterpolator ease = new DecelerateInterpolator(2f);
+        for (View v : chrome) v.animate().alpha(showroom ? 0f : 1f).setStartDelay(0).setDuration(700).start();
+        rail.animate().alpha(showroom ? 0f : 1f).setDuration(700).start();
+        railHair.animate().alpha(showroom ? 0f : 1f).setDuration(700).start();
+        truck.animate().scaleX(showroom ? 1.16f : 1f).scaleY(showroom ? 1.16f : 1f)
+                .translationY(showroom ? dp(26) : 0).setStartDelay(0).setDuration(1600).setInterpolator(ease).start();
+        View cap = stage.findViewWithTag("caption");
+        cap.animate().alpha(showroom ? 1f : 0f).setStartDelay(showroom ? 900 : 0).setDuration(900).start();
+    }
+
+    /** In showroom any touch brings the dashboard back; any touch also resets the idle timer. */
+    @Override
+    public boolean dispatchTouchEvent(android.view.MotionEvent e) {
+        lastTouch = SystemClock.elapsedRealtime();
+        if (showroom && e.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+            toggleShowroom();
+            return true;
+        }
+        if (showroom) return true;
+        return super.dispatchTouchEvent(e);
     }
 
     // ======================= Boot animation =======================
@@ -552,12 +643,14 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
     }
 
     private void playBoot() {
+        if (showroom) toggleShowroom();
         View b = bootLayer;
         EmblemView emb = b.findViewWithTag("emb");
         View w1 = b.findViewWithTag("w1"), line = b.findViewWithTag("line");
         View w2 = b.findViewWithTag("w2"), w3 = b.findViewWithTag("w3");
         DecelerateInterpolator ease = new DecelerateInterpolator(2f);
 
+        lastBootAt = SystemClock.elapsedRealtime();
         handler.removeCallbacksAndMessages("boot");
         b.animate().cancel();
         b.setAlpha(1f);
@@ -605,7 +698,7 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
     private final BroadcastReceiver bootReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context c, Intent i) {
-            playBoot();
+            if (SystemClock.elapsedRealtime() - lastBootAt > 20_000) playBoot();
         }
     };
 
@@ -640,6 +733,13 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
     private final Runnable fast = new Runnable() {
         public void run() {
             updateSpeed();
+            long now = SystemClock.elapsedRealtime();
+            boolean parked = Odometer.speedNow() <= 0;
+            if (!showroom && parked && now - lastTouch > AUTO_SHOWROOM_MS && bootLayer.getVisibility() != View.VISIBLE) {
+                toggleShowroom(); // parked and untouched for a while: show the truck off
+            } else if (showroom && !parked) {
+                toggleShowroom(); // started driving: back to the data
+            }
             handler.postDelayed(this, 1000);
         }
     };
@@ -732,6 +832,8 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         registerReceiver(illReceiver, new IntentFilter("com.nwd.ACTION_ILL_STATE_CHANGE"));
         registerReceiver(bootReceiver, new IntentFilter(ACTION_BOOT));
         truck.setLights(truck.hasLights() && carLightsOn(), false);
+        // The car or screen came on since the last intro: play it (the broadcast may arrive before we are visible).
+        if (GreeterService.wokeAt > lastBootAt && SystemClock.elapsedRealtime() - GreeterService.wokeAt < 60_000) playBoot();
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
         }

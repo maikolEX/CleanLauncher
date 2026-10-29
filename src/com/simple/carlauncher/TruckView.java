@@ -26,7 +26,9 @@ public class TruckView extends View {
     private float lightsAlpha;
     private float haloStrength = 1f;   // 1 = day, lower at night
     private float pulse;               // showroom breathing 0..1
-    private ValueAnimator pulseAnim;
+    private ValueAnimator pulseAnim, sweepAnim;
+    private float sweep = -1f;         // showroom light sweep position 0..1 (-1 = off)
+    private final Paint sweepPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private final Paint bmp = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint halo = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -42,6 +44,7 @@ public class TruckView extends View {
         ring.setStyle(Paint.Style.STROKE);
         ring.setStrokeWidth(Ui.dp(c, 1));
         fade.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
+        sweepPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP));
     }
 
     void setCar(Bitmap car, Bitmap lights) {
@@ -79,11 +82,13 @@ public class TruckView extends View {
         invalidate();
     }
 
-    /** Showroom: the halo breathes slowly. */
+    /** Showroom: the halo breathes slowly and a gold light sweeps across the paint. */
     void setShowroom(boolean on) {
         if (pulseAnim != null) pulseAnim.cancel();
+        if (sweepAnim != null) sweepAnim.cancel();
         if (!on) {
             pulse = 0;
+            sweep = -1f;
             invalidate();
             return;
         }
@@ -92,6 +97,12 @@ public class TruckView extends View {
         pulseAnim.setInterpolator(new LinearInterpolator());
         pulseAnim.addUpdateListener(v -> { pulse = (float) v.getAnimatedValue(); invalidate(); });
         pulseAnim.start();
+        // 0..1 is the sweep crossing the truck; 1..1.8 is a pause before the next pass.
+        sweepAnim = ValueAnimator.ofFloat(-0.2f, 1.8f).setDuration(4200);
+        sweepAnim.setRepeatCount(ValueAnimator.INFINITE);
+        sweepAnim.setInterpolator(new LinearInterpolator());
+        sweepAnim.addUpdateListener(v -> { sweep = (float) v.getAnimatedValue(); invalidate(); });
+        sweepAnim.start();
     }
 
     /** Where the truck is drawn, for placing the data around it. */
@@ -158,9 +169,20 @@ public class TruckView extends View {
         c.drawRect(dst.left, dst.bottom, dst.right, dst.bottom + reflH, fade);
         c.restoreToCount(save);
 
-        // The truck itself.
+        // The truck itself (with the showroom light sweep clipped to the paint).
         bmp.setAlpha(255);
-        drawCar(c);
+        if (sweep > -0.2f && sweep < 1.2f) {
+            int l2 = c.saveLayer(dst.left, dst.top, dst.right, dst.bottom, null);
+            drawCar(c);
+            float x = dst.left + (dst.width() * 1.4f) * sweep - dst.width() * 0.2f;
+            float band = dst.width() * 0.18f;
+            sweepPaint.setShader(new LinearGradient(x - band, dst.top, x + band, dst.bottom,
+                    new int[]{0x00FFF1BF, 0x66FFF1BF, 0x00FFF1BF}, null, Shader.TileMode.CLAMP));
+            c.drawRect(dst, sweepPaint);
+            c.restoreToCount(l2);
+        } else {
+            drawCar(c);
+        }
     }
 
     private void drawCar(Canvas c) {
@@ -190,5 +212,6 @@ public class TruckView extends View {
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
         if (pulseAnim != null) pulseAnim.cancel();
+        if (sweepAnim != null) sweepAnim.cancel();
     }
 }
