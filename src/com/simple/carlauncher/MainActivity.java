@@ -217,7 +217,7 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         LinearLayout c = column();
         TextClock time = new TextClock(this);
         time.setFormat24Hour("HH:mm");
-        time.setFormat12Hour("hh:mm");
+        time.setFormat12Hour("h:mm");
         time.setTextSize(54);
         time.setTextColor(Gg.TEXT);
         time.setTypeface(Gg.light(this));
@@ -332,7 +332,7 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         weatherIcon.setColorFilter(w.icon() == R.drawable.ic_w_sun ? Gg.IGNITION : Gg.GOLD);
         weatherTemp.setText(w.temp + "°");
         weatherDesc.setText(w.description());
-        weatherCity.setText((w.city.isEmpty() ? "" : w.city + " · ") + "↑" + w.max + "° ↓" + w.min + "°");
+        weatherCity.setText((w.city.isEmpty() ? "" : w.city + " · ") + "Máx " + w.max + " · Mín " + w.min);
     }
 
     private void fetchWeather(boolean force) {
@@ -372,7 +372,8 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
 
     private void updateSpeed() {
         int s = Odometer.speedNow();
-        speed.setText(s < 0 ? "--" : String.valueOf(s));
+        // With the 10 m GPS filter no fixes arrive while parked: no recent fix = stopped.
+        speed.setText(String.valueOf(Math.max(0, s)));
         odometer.setText(Odometer.isConfigured(this) ? OilActivity.fmt(Odometer.currentKm(this)) + " km" : "Configurar");
     }
 
@@ -490,7 +491,7 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
             oil = left < 0 ? "Aceite · cambio vencido" : "Aceite en " + OilActivity.fmt(left) + " km";
         }
         boolean warn = Odometer.isConfigured(this) && Odometer.remainingKm(this) <= Odometer.WARN_KM;
-        status.setText(("Mantenimiento · " + oil + "     ·     Placa …" + Restriccion.plateDigit(this)).toUpperCase());
+        status.setText(("Mantenimiento · " + oil + "     ·     Placa termina en " + Restriccion.plateDigit(this)).toUpperCase());
         status.setTextColor(warn ? Gg.AMBER : Gg.LABEL);
     }
 

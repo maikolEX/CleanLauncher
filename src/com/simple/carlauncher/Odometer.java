@@ -35,7 +35,7 @@ public class Odometer extends Service implements LocationListener {
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             try {
-                lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, this);
+                lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 10, this);
             } catch (Exception e) {
                 Log.w(TAG, "no GPS", e);
             }
@@ -58,19 +58,24 @@ public class Odometer extends Service implements LocationListener {
 
     @Override
     public void onLocationChanged(Location l) {
-        if (l.hasSpeed() && (!l.hasAccuracy() || l.getAccuracy() <= 50)) {
-            float v = l.getSpeed() * 3.6f;
-            speedKmh = v < 3 ? 0 : v; // parked GPS jitter reads as 0
-            speedAt = android.os.SystemClock.elapsedRealtime();
+        // This head unit's GPS reports nonsense speeds while parked (e.g. 383 km/h), so the speed
+        // is taken from the distance between two good fixes and the reported one only when it agrees.
+        if (!l.hasAccuracy() || l.getAccuracy() > 25) {
+            return;
         }
-        if (!l.hasAccuracy() || l.getAccuracy() > 25) return;
+        float kmh = -1;
         if (last != null) {
             float d = last.distanceTo(l);
-            float secs = Math.max(1, (l.getTime() - last.getTime()) / 1000f);
-            float kmh = d / secs * 3.6f;
-            boolean moving = (l.hasSpeed() ? l.getSpeed() * 3.6f : kmh) > 4;
-            // Count only real driving; drop parked drift and impossible jumps.
-            if (moving && kmh < 200) pendingMeters += d;
+            float secs = (l.getTime() - last.getTime()) / 1000f;
+            if (secs >= 0.5f && secs <= 10f) kmh = d / secs * 3.6f;
+            boolean moving = kmh > 4 && kmh < 200;
+            if (moving) pendingMeters += d; // count only real driving; drop parked drift and jumps
+        }
+        if (kmh >= 0 && kmh < 200) {
+            float reported = l.hasSpeed() ? l.getSpeed() * 3.6f : -1;
+            float v = reported >= 0 && reported < 200 && Math.abs(reported - kmh) < 25 ? reported : kmh;
+            speedKmh = v < 4 ? 0 : v; // parked GPS jitter reads as 0
+            speedAt = android.os.SystemClock.elapsedRealtime();
         }
         last = l;
         if (pendingMeters >= 100) { // persist every 100 m
