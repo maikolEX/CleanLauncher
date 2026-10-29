@@ -34,7 +34,7 @@ public class SetupActivity extends Activity {
     private EditText name;
     private ImageView carPreview;
     private Switch voice, picoPlaca;
-    private TextView homeBtn, locationBtn, notifBtn, overlayBtn;
+    private TextView homeBtn, locationBtn, notifBtn, overlayBtn, usageBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -133,6 +133,8 @@ public class SetupActivity extends Activity {
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:" + getPackageName()))));
             card.addView(spaced(overlayBtn));
         }
+        usageBtn = button("", 0x33D4AF37, () -> openSettings(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
+        card.addView(spaced(usageBtn));
 
         TextView info = Ui.text(this, Profile.isNwd(this)
                 ? "Radio NWD detectada: radio FM, Bluetooth, ecualizador y aviso de volumen activados."
@@ -242,8 +244,9 @@ public class SetupActivity extends Activity {
         notifBtn.setText(check(listeners != null && listeners.contains(getPackageName()))
                 + "Ver la música de otras apps");
         if (overlayBtn != null) {
-            overlayBtn.setText(check(Settings.canDrawOverlays(this)) + "Aviso de volumen");
+            overlayBtn.setText(check(Settings.canDrawOverlays(this)) + "Aviso de volumen y ventana flotante");
         }
+        usageBtn.setText(check(FloatService.hasUsageAccess(this)) + "Ventana flotante sola al abrir Android Auto");
     }
 
     private String homePackage() {

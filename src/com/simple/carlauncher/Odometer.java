@@ -69,7 +69,10 @@ public class Odometer extends Service implements LocationListener {
             float secs = (l.getTime() - last.getTime()) / 1000f;
             if (secs >= 0.5f && secs <= 10f) kmh = d / secs * 3.6f;
             boolean moving = kmh > 4 && kmh < 200;
-            if (moving) pendingMeters += d; // count only real driving; drop parked drift and jumps
+            if (moving) {
+                pendingMeters += d; // count only real driving; drop parked drift and jumps
+                tripMove(this, d, kmh, secs);
+            }
         }
         if (kmh >= 0 && kmh < 200) {
             float reported = l.hasSpeed() ? l.getSpeed() * 3.6f : -1;
@@ -98,6 +101,37 @@ public class Odometer extends Service implements LocationListener {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    // ---------- Trip (for the summary when the car is switched off) ----------
+
+    /** A new trip starts when the car moves again after this long standing still. */
+    private static final long NEW_TRIP_AFTER_MS = 20 * 60 * 1000;
+
+    static SharedPreferences tripPrefs(Context c) {
+        return c.getSharedPreferences("trip", Context.MODE_PRIVATE);
+    }
+
+    static void tripMove(Context c, float meters, float kmh, float secs) {
+        SharedPreferences p = tripPrefs(c);
+        long now = System.currentTimeMillis();
+        SharedPreferences.Editor e = p.edit();
+        if (now - p.getLong("last_move", 0) > NEW_TRIP_AFTER_MS || p.getBoolean("ended", false)) {
+            e.putLong("start", now).putFloat("meters", 0).putFloat("max", 0).putFloat("moving_s", 0)
+                    .putBoolean("ended", false).putBoolean("shown", false);
+            e.apply();
+            e = p.edit();
+        }
+        e.putFloat("meters", p.getFloat("meters", 0) + meters)
+                .putFloat("max", Math.max(p.getFloat("max", 0), kmh))
+                .putFloat("moving_s", p.getFloat("moving_s", 0) + secs)
+                .putLong("last_move", now)
+                .apply();
+    }
+
+    /** The car was switched off: the current trip is over. */
+    static void endTrip(Context c) {
+        tripPrefs(c).edit().putBoolean("ended", true).apply();
     }
 
     // ---------- Shared state ----------

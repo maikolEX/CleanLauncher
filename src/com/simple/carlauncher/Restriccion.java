@@ -36,6 +36,13 @@ final class Restriccion {
         }
     }
 
+    /** Tomorrow is a restricted day for this plate. */
+    static boolean restrictedTomorrow(Context c) {
+        Calendar t = Calendar.getInstance();
+        t.add(Calendar.DAY_OF_MONTH, 1);
+        return t.get(Calendar.DAY_OF_WEEK) == restrictedDay(plateDigit(c));
+    }
+
     static boolean restrictedToday(Context c) {
         return Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == restrictedDay(plateDigit(c));
     }

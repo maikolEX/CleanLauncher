@@ -127,6 +127,22 @@ public class GreeterService extends Service {
         if (btPlaying) src = SRC_BT;
         prefs().edit().putInt("last_source", src).apply();
         Log.d(TAG, "car off, last source=" + src);
+        showTripSummary();
+    }
+
+    /** GHOST GOLD goodbye: summary of the trip that just ended (only after a real drive). */
+    private void showTripSummary() {
+        android.content.SharedPreferences t = Odometer.tripPrefs(this);
+        boolean recent = System.currentTimeMillis() - t.getLong("last_move", 0) < 30 * 60_000;
+        boolean worth = t.getFloat("meters", 0) >= 300 && !t.getBoolean("shown", false);
+        Odometer.endTrip(this);
+        if (!recent || !worth) return;
+        t.edit().putBoolean("shown", true).apply();
+        try {
+            startActivity(new Intent(this, ByeActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (Exception e) {
+            Log.w(TAG, "no trip summary", e);
+        }
     }
 
     /** When the car (ACC) or the screen last came on; the home screen plays its intro after it. */

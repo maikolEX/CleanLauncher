@@ -58,6 +58,13 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
     private TextView showroomTitle, showroomLabel;
     private long lastTouch = SystemClock.elapsedRealtime();
 
+    // Driving mode
+    private DriveView drive;
+    private boolean driving;
+    private int fastTicks, slowTicks;
+    private long simUntil;      // test drive (long-press the speed) until this time
+    private int simSpeed;
+
     private TextView greeting, weatherTemp, weatherDesc, weatherCity;
     private ImageView weatherIcon;
     private TextView speed, odometer;
@@ -109,6 +116,7 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         if (Profile.isNwd(this)) startService(new Intent(this, VolumeOverlay.class));
         startService(new Intent(this, GreeterService.class));
         startService(new Intent(this, Odometer.class));
+        startService(new Intent(this, FloatService.class)); // floats over Android Auto
 
         if (!bootShown) {
             bootShown = true;
@@ -130,17 +138,21 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         rail.addView(emb, new LinearLayout.LayoutParams(dp(46), dp(46)));
         Ui.pressable(emb, 0.9f);
         emb.setOnClickListener(v -> playBoot());
+        emb.setOnLongClickListener(v -> { startActivity(new Intent(this, ByeActivity.class)); return true; });
 
         LinearLayout items = new LinearLayout(this);
         items.setOrientation(LinearLayout.VERTICAL);
         items.setGravity(Gravity.CENTER);
         items.addView(railItem(R.drawable.ic_compass, "Mapa", this::openMaps, this::chooseMaps));
+        items.addView(railItem(R.drawable.ic_smartphone, "Android Auto", this::openAndroidAuto, null));
         items.addView(railItem(R.drawable.ic_music, "Música", () -> nowPlaying.open(this), null));
         items.addView(railItem(R.drawable.ic_phone, "Teléfono", this::openBluetooth, null));
         items.addView(railItem(R.drawable.ic_radio, "Radio", this::openRadio, null));
         items.addView(railItem(R.drawable.ic_apps, "Apps",
                 () -> startActivity(new Intent(this, AppsActivity.class)), null));
         items.addView(railItem(R.drawable.ic_eq, "Sonido", this::openEqualizer, null));
+        items.addView(railItem(R.drawable.ic_gear, "Mantenimiento",
+                () -> startActivity(new Intent(this, MaintenanceActivity.class)), null));
         items.addView(railItem(R.drawable.ic_car, "Showroom", this::toggleShowroom, null));
         items.addView(railItem(R.drawable.ic_settings, "Ajustes",
                 () -> startActivity(new Intent(this, SetupActivity.class)), this::openSystemSettings));
@@ -155,10 +167,11 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         ImageView iv = new ImageView(this);
         iv.setImageResource(icon);
         iv.setColorFilter(Gg.LABEL);
-        iv.setPadding(dp(15), dp(15), dp(15), dp(15));
+        iv.setPadding(dp(13), dp(13), dp(13), dp(13));
         iv.setContentDescription(name);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(56), dp(56));
-        lp.setMargins(0, dp(3), 0, dp(3));
+        // 10 sections + "Noche" must fit the 720 px screen: 48 dp buttons.
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(48), dp(48));
+        lp.setMargins(0, dp(2), 0, dp(2));
         iv.setLayoutParams(lp);
         Ui.pressable(iv, 0.86f);
         iv.setOnClickListener(v -> {
@@ -193,6 +206,10 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         }
         truck.setNight(createdDark);
         s.addView(truck, new FrameLayout.LayoutParams(-1, -1));
+        drive = new DriveView(this);
+        drive.setAlpha(0f);
+        drive.setVisibility(View.GONE);
+        s.addView(drive, new FrameLayout.LayoutParams(-1, -1));
         truck.setOnClickListener(v -> toggleShowroom());
         truck.setOnLongClickListener(v -> { startActivity(new Intent(this, SetupActivity.class)); return true; });
 
@@ -397,6 +414,7 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         c.addView(buildTires(), new LinearLayout.LayoutParams(-2, -2));
         Ui.pressable(c, 0.97f);
         c.setOnClickListener(v2 -> startActivity(new Intent(this, OilActivity.class)));
+        c.setOnLongClickListener(v2 -> { toggleTestDrive(); return true; });
         return c;
     }
 
@@ -444,8 +462,56 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         return c;
     }
 
+    /** Real GPS speed, or the simulated one during a test drive. */
+    private int currentSpeed() {
+        long now = SystemClock.elapsedRealtime();
+        if (now < simUntil) {
+            long left = simUntil - now;
+            if (left < 8000) return (int) (simSpeed * left / 8000f); // slows down at the end (brake lights)
+            return simSpeed + (int) (6 * Math.sin(now / 2500.0));
+        }
+        return Odometer.speedNow();
+    }
+
+    private void toggleTestDrive() {
+        long now = SystemClock.elapsedRealtime();
+        if (now < simUntil) {
+            simUntil = now + 8000; // brake to a stop
+        } else {
+            simSpeed = 45;
+            simUntil = now + 45_000;
+            toast("Prueba de conducción: 45 segundos");
+        }
+    }
+
+    private void updateDriving(int kmh) {
+        if (!drive.available()) return;
+        if (kmh >= 8) { fastTicks++; slowTicks = 0; } else { slowTicks++; fastTicks = 0; }
+        drive.setSpeed(Math.max(0, kmh));
+        if (!driving && fastTicks >= 3) setDriving(true);
+        else if (driving && slowTicks >= 8) setDriving(false);
+    }
+
+    /** Front view of the truck when parked; from behind on the road while driving. */
+    private void setDriving(boolean on) {
+        driving = on;
+        if (showroom) toggleShowroom();
+        if (on) {
+            drive.setVisibility(View.VISIBLE);
+            drive.setRunning(true);
+            drive.animate().alpha(1f).setDuration(900).withEndAction(null).start();
+            truck.animate().alpha(0f).setDuration(700).start();
+        } else {
+            drive.animate().alpha(0f).setDuration(700).withEndAction(() -> {
+                drive.setRunning(false);
+                drive.setVisibility(View.GONE);
+            }).start();
+            truck.animate().alpha(1f).setDuration(900).start();
+        }
+    }
+
     private void updateSpeed() {
-        int s = Odometer.speedNow();
+        int s = currentSpeed();
         // With the 10 m GPS filter no fixes arrive while parked: no recent fix = stopped.
         speed.setText(String.valueOf(Math.max(0, s)));
         odometer.setText(Odometer.isConfigured(this) ? OilActivity.fmt(Odometer.currentKm(this)) + " km" : "Configurar");
@@ -553,11 +619,26 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         status.setGravity(Gravity.CENTER);
         status.setPadding(dp(16), dp(10), dp(16), dp(10));
         Ui.pressable(status, 0.96f);
-        status.setOnClickListener(v -> startActivity(new Intent(this, OilActivity.class)));
+        status.setOnClickListener(v -> startActivity(new Intent(this, MaintenanceActivity.class)));
         return status;
     }
 
+    private int alertCycle;
+
+    /** Bottom line: the most urgent alert (amber pill, rotating if several) or the maintenance summary. */
     private void updateStatus() {
+        java.util.List<Alertas.Alerta> alerts = Alertas.current(this);
+        if (!alerts.isEmpty()) {
+            Alertas.Alerta a = alerts.get((alertCycle / 6) % alerts.size());
+            status.setText(("⚠  " + a.title + " · " + a.detail).toUpperCase());
+            status.setTextColor(a.level == 2 ? Gg.AMBER : Gg.CHAMPAGNE);
+            GradientDrawable bg = Gg.pill(this, true);
+            bg.setColor(a.level == 2 ? 0x2EE8A33D : Gg.SURFACE);
+            bg.setStroke(dp(1), a.level == 2 ? 0xB3E8A33D : Gg.HAIR);
+            status.setBackground(bg);
+            return;
+        }
+        status.setBackground(null);
         String oil;
         if (!Odometer.isConfigured(this)) oil = "Aceite · configurar";
         else {
@@ -572,6 +653,7 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
     // ======================= Showroom =======================
 
     private void toggleShowroom() {
+        if (!showroom && driving) return; // no showroom while driving
         showroom = !showroom;
         lastTouch = SystemClock.elapsedRealtime();
         truck.setShowroom(showroom);
@@ -736,9 +818,11 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
     private final Runnable fast = new Runnable() {
         public void run() {
             updateSpeed();
+            updateDriving(currentSpeed());
+            if (++alertCycle % 6 == 0) updateStatus(); // rotate alerts every ~6 s
             long now = SystemClock.elapsedRealtime();
-            boolean parked = Odometer.speedNow() <= 0;
-            if (!showroom && parked && now - lastTouch > AUTO_SHOWROOM_MS && bootLayer.getVisibility() != View.VISIBLE) {
+            boolean parked = currentSpeed() <= 0;
+            if (!showroom && !driving && parked && now - lastTouch > AUTO_SHOWROOM_MS && bootLayer.getVisibility() != View.VISIBLE) {
                 toggleShowroom(); // parked and untouched for a while: show the truck off
             } else if (showroom && !parked) {
                 toggleShowroom(); // started driving: back to the data
@@ -783,6 +867,17 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         } catch (PackageManager.NameNotFoundException e) {
             return false;
         }
+    }
+
+    /** Opens Android Auto (ZLink) with the GHOST GOLD panel floating on top. */
+    private void openAndroidAuto() {
+        Intent aa = getPackageManager().getLaunchIntentForPackage(FloatService.ZLINK);
+        if (aa == null) { toast("No se encontró ZLink (Android Auto)"); return; }
+        if (!android.provider.Settings.canDrawOverlays(this)) {
+            toast("Activa \"Aviso de volumen y ventana flotante\" en Ajustes para ver GHOST GOLD encima");
+        }
+        safeStart(aa);
+        handler.postDelayed(() -> FloatService.show(this), 1200);
     }
 
     private void openRadio() {
@@ -842,6 +937,8 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         }
         handler.post(periodic);
         handler.post(fast);
+        if (driving) drive.setRunning(true);
+        FloatService.hide(this); // the home screen already shows everything
         if (Profile.isNwd(this)) handler.post(radioPoll);
         nowPlaying.addListener(this);
         onNowPlayingChanged();
@@ -854,6 +951,7 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         unregisterReceiver(bootReceiver);
         handler.removeCallbacks(periodic);
         handler.removeCallbacks(fast);
+        drive.setRunning(false);
         handler.removeCallbacks(radioPoll);
         nowPlaying.removeListener(this);
     }
@@ -864,6 +962,7 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
             fetchWeather(true);
             stopService(new Intent(this, Odometer.class)); // restart so it starts listening to GPS
             startService(new Intent(this, Odometer.class));
+        startService(new Intent(this, FloatService.class)); // floats over Android Auto
         }
     }
 
