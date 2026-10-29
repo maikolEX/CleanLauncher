@@ -34,7 +34,7 @@ public class SetupActivity extends Activity {
     private EditText name;
     private ImageView carPreview;
     private Switch voice, picoPlaca;
-    private TextView homeBtn, locationBtn, notifBtn, overlayBtn;
+    private TextView homeBtn, locationBtn, notifBtn, overlayBtn, usageBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,7 +50,7 @@ public class SetupActivity extends Activity {
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         bar.addView(title, new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView done = button("Listo", 0xFF2ECC71, this::finishSetup);
+        TextView done = button("Listo", 0xFFB8901F, this::finishSetup);
         bar.addView(done, new LinearLayout.LayoutParams(-2, -2));
         root.addView(bar, new LinearLayout.LayoutParams(-1, dp(56)));
 
@@ -93,7 +93,7 @@ public class SetupActivity extends Activity {
         carPreview.setScaleType(ImageView.ScaleType.FIT_CENTER);
         card.addView(carPreview, new LinearLayout.LayoutParams(-1, dp(110)));
         LinearLayout photoRow = new LinearLayout(this);
-        photoRow.addView(button("Elegir foto", 0x334F7BFF, this::pickPhoto),
+        photoRow.addView(button("Elegir foto", 0x33D4AF37, this::pickPhoto),
                 new LinearLayout.LayoutParams(0, -2, 1f));
         LinearLayout.LayoutParams qlp = new LinearLayout.LayoutParams(0, -2, 1f);
         qlp.leftMargin = dp(8);
@@ -120,19 +120,21 @@ public class SetupActivity extends Activity {
         card.setPadding(dp(18), dp(14), dp(18), dp(14));
         card.addView(label("Para que todo funcione"));
 
-        homeBtn = button("", 0x334F7BFF, () -> openSettings(new Intent(Settings.ACTION_HOME_SETTINGS)));
+        homeBtn = button("", 0x33D4AF37, () -> openSettings(new Intent(Settings.ACTION_HOME_SETTINGS)));
         card.addView(spaced(homeBtn));
-        locationBtn = button("", 0x334F7BFF,
+        locationBtn = button("", 0x33D4AF37,
                 () -> requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1));
         card.addView(spaced(locationBtn));
-        notifBtn = button("", 0x334F7BFF,
+        notifBtn = button("", 0x33D4AF37,
                 () -> openSettings(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")));
         card.addView(spaced(notifBtn));
         if (Profile.isNwd(this)) {
-            overlayBtn = button("", 0x334F7BFF, () -> openSettings(new Intent(
+            overlayBtn = button("", 0x33D4AF37, () -> openSettings(new Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:" + getPackageName()))));
             card.addView(spaced(overlayBtn));
         }
+        usageBtn = button("", 0x33D4AF37, () -> openSettings(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
+        card.addView(spaced(usageBtn));
 
         TextView info = Ui.text(this, Profile.isNwd(this)
                 ? "Radio NWD detectada: radio FM, Bluetooth, ecualizador y aviso de volumen activados."
@@ -242,8 +244,9 @@ public class SetupActivity extends Activity {
         notifBtn.setText(check(listeners != null && listeners.contains(getPackageName()))
                 + "Ver la música de otras apps");
         if (overlayBtn != null) {
-            overlayBtn.setText(check(Settings.canDrawOverlays(this)) + "Aviso de volumen");
+            overlayBtn.setText(check(Settings.canDrawOverlays(this)) + "Aviso de volumen y ventana flotante");
         }
+        usageBtn.setText(check(FloatService.hasUsageAccess(this)) + "Ventana flotante sola al abrir Android Auto");
     }
 
     private String homePackage() {

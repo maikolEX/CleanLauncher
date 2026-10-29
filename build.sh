@@ -87,7 +87,7 @@ RES=res
 if [ "$VARIANT" = share ]; then
     RES=build/res-share
     cp -r res "$RES"
-    rm -f "$RES"/drawable-nodpi/optra*.png "$RES"/raw/v_*.mp3
+    rm -f "$RES"/drawable-nodpi/car*.png "$RES"/raw/v_*.mp3
     rmdir "$RES"/raw "$RES"/drawable-nodpi 2>/dev/null || true
     APK_NAME=CleanLauncher-compartir.apk
 fi
@@ -95,6 +95,7 @@ fi
 "$BT/aapt2$EXE" compile --dir "$RES" -o build/res.zip
 "$BT/aapt2$EXE" link -I "$JAR" --manifest AndroidManifest.xml \
     --min-sdk-version $MIN_SDK --target-sdk-version $TARGET_SDK \
+    $( [ -d assets ] && echo "-A assets" ) \
     --java build/gen -o build/unsigned.apk build/res.zip
 
 "$JDK/javac$EXE" -nowarn -Xlint:-options --release 8 -encoding UTF-8 \

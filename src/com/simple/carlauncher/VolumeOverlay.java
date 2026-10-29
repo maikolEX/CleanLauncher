@@ -98,9 +98,9 @@ public class VolumeOverlay extends Service {
         pill.setGravity(Gravity.CENTER_VERTICAL);
         pill.setPadding(dp(12), 0, dp(26), 0);
         GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
-                new int[]{0xF21B2C8C, 0xF2371764});
+                new int[]{0xF2111111, 0xF2050505});
         bg.setCornerRadius(dp(36));
-        bg.setStroke(dp(1), 0x667FD8FF);
+        bg.setStroke(dp(1), 0x66D4AF37);
         pill.setBackground(bg);
         pill.setElevation(dp(12));
 
@@ -200,7 +200,7 @@ public class VolumeOverlay extends Service {
 
         @Override
         protected void onSizeChanged(int w, int h, int ow, int oh) {
-            fill.setShader(new LinearGradient(0, 0, w, 0, 0xFF2EE6FF, 0xFFB45CFF, Shader.TileMode.CLAMP));
+            fill.setShader(new LinearGradient(0, 0, w, 0, 0xFFFFE27A, 0xFFB8901F, Shader.TileMode.CLAMP));
         }
 
         @Override

@@ -78,7 +78,7 @@ public class BtActivity extends Activity implements NowPlaying.Listener {
     private View buildMusic() {
         FrameLayout card = new FrameLayout(this);
         GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                Ui.pick(this, new int[]{0xFF2E6BFF, 0xFF6A3BFF, 0xFFB04CE8}, new int[]{0xFF1F2A55, 0xFF1A1235, 0xFF0B0B10}));
+                Ui.pick(this, new int[]{0xFF1A1710, 0xFF111111, 0xFF0A0A0A}, new int[]{0xFF16140E, 0xFF0E0E0E, 0xFF070707}));
         bg.setCornerRadius(dp(18));
         card.setBackground(bg);
 
@@ -193,7 +193,7 @@ public class BtActivity extends Activity implements NowPlaying.Listener {
         ImageView contacts = Ui.iconButton(this, R.drawable.ic_contacts, 52, false, () -> Ui.launch(this, FACTORY_PHONE));
         actions.addView(contacts, new LinearLayout.LayoutParams(dp(52), dp(52)));
         ImageView call = Ui.iconButton(this, R.drawable.ic_call, 60, false, this::call);
-        call.setBackground(Ui.circle(0xFF2ECC71));
+        call.setBackground(Ui.circle(0xFFB8901F));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(dp(60), dp(60));
         clp.leftMargin = dp(28);
         actions.addView(call, clp);
@@ -216,7 +216,7 @@ public class BtActivity extends Activity implements NowPlaying.Listener {
         boolean connected = bt.isPhoneConnected();
         status.setText(connected ? "●  " + (name == null || name.isEmpty() ? "Teléfono conectado" : name)
                 : "Sin teléfono · Conectar");
-        statusBg.setColor(connected ? 0xCC1E9E5A : 0x26FFFFFF);
+        statusBg.setColor(connected ? 0xCC9C7A1E : 0x26FFFFFF);
     }
 
     @Override

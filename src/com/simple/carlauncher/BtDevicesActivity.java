@@ -61,7 +61,7 @@ public class BtDevicesActivity extends Activity {
         searchChip = Ui.text(this, "Buscar", 16, Color.WHITE);
         searchChip.setPadding(dp(20), dp(10), dp(20), dp(10));
         GradientDrawable sbg = new GradientDrawable();
-        sbg.setColor(0xFF4F7BFF);
+        sbg.setColor(0xFF9C7A1E);
         sbg.setCornerRadius(dp(22));
         searchChip.setBackground(sbg);
         Ui.pressable(searchChip, 0.92f);
@@ -87,7 +87,7 @@ public class BtDevicesActivity extends Activity {
         card.setGravity(Gravity.CENTER_HORIZONTAL);
         card.setPadding(dp(22), dp(22), dp(22), dp(22));
         GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                Ui.pick(this, new int[]{0xFF2E6BFF, 0xFF6A3BFF, 0xFFB04CE8}, new int[]{0xFF1F2A55, 0xFF1A1235, 0xFF0B0B10}));
+                Ui.pick(this, new int[]{0xFF1A1710, 0xFF111111, 0xFF0A0A0A}, new int[]{0xFF16140E, 0xFF0E0E0E, 0xFF070707}));
         bg.setCornerRadius(dp(18));
         card.setBackground(bg);
 
@@ -174,13 +174,13 @@ public class BtDevicesActivity extends Activity {
         r.setPadding(dp(12), dp(10), dp(10), dp(10));
         GradientDrawable bg = new GradientDrawable();
         bg.setCornerRadius(dp(14));
-        bg.setColor(isConnected ? 0x4D2ECC71 : 0x1AFFFFFF);
-        if (isConnected) bg.setStroke(dp(1), 0x992ECC71);
+        bg.setColor(isConnected ? 0x33D4AF37 : 0x1AFFFFFF);
+        if (isConnected) bg.setStroke(dp(1), 0x99D4AF37);
         r.setBackground(bg);
 
         ImageView icon = new ImageView(this);
         icon.setImageResource(R.drawable.ic_smartphone);
-        icon.setColorFilter(isConnected ? 0xFF2ECC71 : Color.WHITE);
+        icon.setColorFilter(isConnected ? 0xFFB8901F : Color.WHITE);
         icon.setPadding(dp(10), dp(10), dp(10), dp(10));
         icon.setBackground(Ui.circle(0x26FFFFFF));
         r.addView(icon, new LinearLayout.LayoutParams(dp(46), dp(46)));
@@ -194,7 +194,7 @@ public class BtDevicesActivity extends Activity {
         String state = isConnected ? "Conectado"
                 : d.mAddress != null && d.mAddress.equals(connecting) ? "Conectando…"
                 : isPaired ? "Toca para conectar" : "Toca para emparejar";
-        TextView sub = Ui.text(this, state, 13, isConnected ? 0xFF7CF0A8 : 0xB3FFFFFF);
+        TextView sub = Ui.text(this, state, 13, isConnected ? 0xFFFFD700 : 0xB3FFFFFF);
         sub.setGravity(Gravity.START);
         texts.addView(sub);
         r.addView(texts, new LinearLayout.LayoutParams(0, -2, 1f));
@@ -216,7 +216,7 @@ public class BtDevicesActivity extends Activity {
         if (isPaired) {
             ImageView del = new ImageView(this);
             del.setImageResource(R.drawable.ic_delete);
-            del.setColorFilter(0xFFFF6B6B);
+            del.setColorFilter(0xFFE8A33D);
             del.setPadding(dp(10), dp(10), dp(10), dp(10));
             Ui.pressable(del, 0.85f);
             del.setOnClickListener(v -> new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)

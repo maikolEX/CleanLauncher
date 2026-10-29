@@ -64,7 +64,7 @@ public class OilActivity extends Activity {
         card.setGravity(Gravity.CENTER);
         card.setPadding(dp(28), dp(20), dp(28), dp(20));
         statusBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                Ui.pick(this, new int[]{0x993FA9FF, 0x667B4DFF}, new int[]{0xFF1E1E28, 0xFF121218}));
+                Ui.pick(this, new int[]{0xFF1A1710, 0xFF0E0E0E}, new int[]{0xFF141414, 0xFF0C0C0C}));
         statusBg.setCornerRadius(dp(18));
         card.setBackground(statusBg);
 
@@ -98,19 +98,19 @@ public class OilActivity extends Activity {
         card.setPadding(dp(16), dp(16), dp(16), dp(16));
         card.setBackground(Ui.card(this));
 
-        card.addView(action("Hice el cambio de aceite hoy", 0xFF2ECC71, () -> {
+        card.addView(action("Hice el cambio de aceite hoy", 0xFFB8901F, () -> {
             Odometer.setLastChangeKm(this, Odometer.currentKm(this));
             Toast.makeText(this, "¡Listo! Registrado el cambio de aceite", Toast.LENGTH_SHORT).show();
             refresh();
         }));
-        card.addView(action("Ajustar kilometraje del tablero", 0x334F7BFF,
+        card.addView(action("Ajustar kilometraje del tablero", 0x33D4AF37,
                 () -> askKm("Kilometraje actual del tablero", Odometer.currentKm(this), km -> {
                     boolean first = !Odometer.isConfigured(this);
                     Odometer.setCurrentKm(this, km);
                     if (first) Odometer.setLastChangeKm(this, km);
                     refresh();
                 })));
-        card.addView(action("Último cambio fue a los… km", 0x334F7BFF,
+        card.addView(action("Último cambio fue a los… km", 0x33D4AF37,
                 () -> askKm("Kilometraje del último cambio", Odometer.lastChangeKm(this), km -> {
                     Odometer.setLastChangeKm(this, km);
                     refresh();
@@ -197,12 +197,12 @@ public class OilActivity extends Activity {
             bar.setProgress(Math.max(0, Math.min(1000, (interval - rem) * 1000 / Math.max(1, interval))));
             statusBg.setColors(rem < 0 ? new int[]{0xCCE53935, 0x99B71C1C}
                     : rem <= Odometer.WARN_KM ? new int[]{0xCCFF9800, 0x99E65100}
-                    : Ui.pick(this, new int[]{0x993FA9FF, 0x667B4DFF}, new int[]{0xFF1E1E28, 0xFF121218}));
+                    : Ui.pick(this, new int[]{0xFF1A1710, 0xFF0E0E0E}, new int[]{0xFF141414, 0xFF0C0C0C}));
         }
         for (int i = 0; i < INTERVALS.length; i++) {
             GradientDrawable bg = new GradientDrawable();
             bg.setCornerRadius(dp(12));
-            bg.setColor(INTERVALS[i] == Odometer.intervalKm(this) ? 0xFF4F7BFF : 0x1FFFFFFF);
+            bg.setColor(INTERVALS[i] == Odometer.intervalKm(this) ? 0xFF9C7A1E : 0x1FFFFFFF);
             intervalChips[i].setBackground(bg);
         }
     }

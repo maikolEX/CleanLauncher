@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.simple.carlauncher"
-    android:versionCode="6"
-    android:versionName="6.0">
+    android:versionCode="7"
+    android:versionName="7.0-ghostgold">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
 
     <application
-        android:label="Inicio"
+        android:label="GHOST GOLD"
         android:icon="@drawable/ic_apps"
         android:theme="@style/LauncherTheme">
 
@@ -55,6 +56,15 @@
 
         <service android:name=".VolumeOverlay" />
 
+        <service android:name=".FloatService" />
+
+        <activity
+            android:name=".ByeActivity"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:configChanges="orientation|screenSize|keyboardHidden|locale" />
+
         <service android:name=".GreeterService" />
 
         <service android:name=".Odometer" />
@@ -76,6 +86,11 @@
             android:configChanges="orientation|screenSize|keyboardHidden|locale" />
 
         <activity
+            android:name=".MaintenanceActivity"
+            android:label="Mantenimiento"
+            android:configChanges="orientation|screenSize|keyboardHidden|locale" />
+
+        <activity
             android:name=".OilActivity"
             android:label="Aceite"
             android:configChanges="orientation|screenSize|keyboardHidden|locale" />
@@ -88,7 +103,7 @@
 
         <service
             android:name=".MediaListener"
-            android:label="Inicio"
+            android:label="GHOST GOLD"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />

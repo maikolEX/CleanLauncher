@@ -5,7 +5,7 @@
 ![Clean Launcher en el radio](docs/screenshot.png)
 
 Launcher Android limpio, ligero y a medida para un radio de auto chino **NWD (Allwinner T3, Android 7.1.1)**
-instalado en un Chevrolet Epica. Reemplaza el launcher de fábrica con una interfaz limpia y rápida
+instalado en una Dongfeng Rich 6. Reemplaza el launcher de fábrica con una interfaz limpia y rápida
 que se comunica directamente con los servicios propietarios del radio.
 
 ## Funciones

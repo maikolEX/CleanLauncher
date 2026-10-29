@@ -72,7 +72,7 @@ public class BalancePad extends View {
 
         float x = cab.left + cab.width() * balance / max;
         float y = cab.top + cab.height() * fader / max;
-        dot.setShader(new RadialGradient(x, y, 26 * d, 0xCC2EE6FF, 0x002EE6FF, Shader.TileMode.CLAMP));
+        dot.setShader(new RadialGradient(x, y, 26 * d, 0xCCFFD700, 0x00FFD700, Shader.TileMode.CLAMP));
         c.drawCircle(x, y, 26 * d, dot);
         dot.setShader(null);
         dot.setColor(0xFFFFFFFF);
