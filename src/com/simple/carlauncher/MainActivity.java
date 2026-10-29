@@ -771,7 +771,7 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
             truck.setTranslationY(dp(24));
             truck.setScaleX(0.96f);
             truck.setScaleY(0.96f);
-            truck.animate().alpha(1f).translationY(0).scaleX(1f).scaleY(1f).setStartDelay(300)
+            truck.animate().alpha(driving ? 0f : 1f).translationY(0).scaleX(1f).scaleY(1f).setStartDelay(300)
                     .setDuration(2000).setInterpolator(ease).start();
             for (View v : chrome) {
                 v.setAlpha(0f);
