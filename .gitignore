@@ -12,3 +12,6 @@ nwd/
 
 # Llave de firma de las versiones para compartir (no subir nunca)
 keys/
+
+# Excepción: llave de depuración del CI para que cada APK se instale encima del anterior
+!ci/debug.keystore

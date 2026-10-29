@@ -35,7 +35,7 @@ public class Odometer extends Service implements LocationListener {
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             try {
-                lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 10, this);
+                lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, this);
             } catch (Exception e) {
                 Log.w(TAG, "no GPS", e);
             }
@@ -47,8 +47,22 @@ public class Odometer extends Service implements LocationListener {
         return START_STICKY;
     }
 
+    /** Latest GPS speed for the home screen (km/h) and when it was measured. */
+    static volatile float speedKmh;
+    static volatile long speedAt;
+
+    /** Current speed in km/h, or -1 when there is no recent GPS fix. */
+    static int speedNow() {
+        return android.os.SystemClock.elapsedRealtime() - speedAt > 6000 ? -1 : Math.round(speedKmh);
+    }
+
     @Override
     public void onLocationChanged(Location l) {
+        if (l.hasSpeed() && (!l.hasAccuracy() || l.getAccuracy() <= 50)) {
+            float v = l.getSpeed() * 3.6f;
+            speedKmh = v < 3 ? 0 : v; // parked GPS jitter reads as 0
+            speedAt = android.os.SystemClock.elapsedRealtime();
+        }
         if (!l.hasAccuracy() || l.getAccuracy() > 25) return;
         if (last != null) {
             float d = last.distanceTo(l);

@@ -7,7 +7,7 @@ import android.graphics.Paint;
 import android.graphics.SweepGradient;
 import android.view.View;
 
-/** Glowing gradient ring used as the center dock button. */
+/** Glowing gold ring used as the apps button. */
 public class RingView extends View {
 
     private final Paint ring = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -27,7 +27,7 @@ public class RingView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int ow, int oh) {
         SweepGradient g = new SweepGradient(w / 2f, h / 2f,
-                new int[]{0xFF2EE6FF, 0xFF4F7BFF, 0xFFB45CFF, 0xFF2EE6FF}, null);
+                new int[]{0xFFFFF1BF, 0xFFD4AF37, 0xFF7A5A12, 0xFFD4AF37, 0xFFFFF1BF}, null);
         ring.setShader(g);
         glow.setShader(g);
     }

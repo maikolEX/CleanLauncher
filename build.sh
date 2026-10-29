@@ -95,6 +95,7 @@ fi
 "$BT/aapt2$EXE" compile --dir "$RES" -o build/res.zip
 "$BT/aapt2$EXE" link -I "$JAR" --manifest AndroidManifest.xml \
     --min-sdk-version $MIN_SDK --target-sdk-version $TARGET_SDK \
+    $( [ -d assets ] && echo "-A assets" ) \
     --java build/gen -o build/unsigned.apk build/res.zip
 
 "$JDK/javac$EXE" -nowarn -Xlint:-options --release 8 -encoding UTF-8 \

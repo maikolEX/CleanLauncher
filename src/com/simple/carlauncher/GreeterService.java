@@ -127,6 +127,8 @@ public class GreeterService extends Service {
     }
 
     private void onCarOn() {
+        // GHOST GOLD boot animation on the home screen (if it is showing).
+        sendBroadcast(new Intent(MainActivity.ACTION_BOOT).setPackage(getPackageName()));
         handler.postDelayed(this::restoreAudio, 3000);
         schedule();
     }

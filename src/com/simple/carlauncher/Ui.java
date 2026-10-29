@@ -15,7 +15,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-/** Shared look (neon blue/purple) and small helpers for all screens. */
+/** Shared look (GHOST GOLD: black and gold) and small helpers for all screens. */
 final class Ui {
 
     // MCU source ids for ACTION_REQUEST_CHANGE_SOURCE: the "Source" column of
@@ -30,7 +30,7 @@ final class Ui {
         return Math.round(v * c.getResources().getDisplayMetrics().density);
     }
 
-    // ---------- Theme: light (blue/purple neon) or dark (black) ----------
+    // ---------- Theme: day or night (GHOST GOLD dims its glow at night) ----------
 
     static final String THEME_AUTO = "auto", THEME_LIGHT = "light", THEME_DARK = "dark";
 
@@ -57,38 +57,24 @@ final class Ui {
         return isDark(c) ? dark : light;
     }
 
+    /** GHOST GOLD: near-black with a faint gold glow (dimmer at night / with the car's lights on). */
     static Drawable background(Context c) {
-        if (isDark(c)) {
-            GradientDrawable base = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                    new int[]{0xFF0C0C12, 0xFF050507, 0xFF000000});
-            GradientDrawable glow = new GradientDrawable();
-            glow.setGradientType(GradientDrawable.RADIAL_GRADIENT);
-            glow.setGradientRadius(dp(c, 560));
-            glow.setGradientCenter(0.95f, 0.95f);
-            glow.setColors(new int[]{0x223F5AFF, 0x003F5AFF});
-            return new LayerDrawable(new Drawable[]{base, glow});
-        }
-        GradientDrawable base = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{0xFF1B2C8C, 0xFF20206E, 0xFF371764});
-        GradientDrawable glowLeft = new GradientDrawable();
-        glowLeft.setGradientType(GradientDrawable.RADIAL_GRADIENT);
-        glowLeft.setGradientRadius(dp(c, 520));
-        glowLeft.setGradientCenter(0.15f, 0.1f);
-        glowLeft.setColors(new int[]{0x553FA9FF, 0x003FA9FF});
-        GradientDrawable glowRight = new GradientDrawable();
-        glowRight.setGradientType(GradientDrawable.RADIAL_GRADIENT);
-        glowRight.setGradientRadius(dp(c, 560));
-        glowRight.setGradientCenter(0.95f, 0.95f);
-        glowRight.setColors(new int[]{0x66B04CFF, 0x00B04CFF});
-        return new LayerDrawable(new Drawable[]{base, glowLeft, glowRight});
+        boolean night = isDark(c);
+        GradientDrawable base = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{0xFF0A0A0A, Gg.VOID, 0xFF000000});
+        GradientDrawable glow = new GradientDrawable();
+        glow.setGradientType(GradientDrawable.RADIAL_GRADIENT);
+        glow.setGradientRadius(dp(c, 620));
+        glow.setGradientCenter(0.55f, 0.55f);
+        glow.setColors(new int[]{night ? 0x14D4AF37 : 0x24D4AF37, 0x00D4AF37});
+        return new LayerDrawable(new Drawable[]{base, glow});
     }
 
     static GradientDrawable card(Context c) {
-        boolean dark = isDark(c);
         GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                dark ? new int[]{0xFF17171E, 0xFF101015} : new int[]{0x4D5B6CFF, 0x333B3FB8});
+                new int[]{Gg.GRAPHITE, Gg.ONYX});
         bg.setCornerRadius(dp(c, 18));
-        bg.setStroke(dp(c, 1), dark ? 0x14FFFFFF : 0x337F9CFF);
+        bg.setStroke(dp(c, 1), 0x33D4AF37);
         return bg;
     }
 
@@ -116,8 +102,17 @@ final class Ui {
         b.setImageResource(icon);
         int pad = Math.round(sizeDp * 0.24f);
         b.setPadding(dp(c, pad), dp(c, pad), dp(c, pad), dp(c, pad));
-        b.setBackground(circle(filled ? Color.WHITE : 0x26FFFFFF));
-        b.setColorFilter(filled ? 0xFF2A1F6E : Color.WHITE);
+        if (filled) {
+            GradientDrawable gold = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                    new int[]{0xFFFFE27A, Gg.IGNITION, Gg.GOLD, 0xFF8A6614});
+            gold.setShape(GradientDrawable.OVAL);
+            b.setBackground(gold);
+        } else {
+            GradientDrawable ring = circle(Gg.SURFACE);
+            ring.setStroke(dp(c, 1), Gg.HAIR);
+            b.setBackground(ring);
+        }
+        b.setColorFilter(filled ? Gg.VOID : Gg.GOLD);
         pressable(b, 0.88f);
         b.setOnClickListener(v -> action.run());
         return b;

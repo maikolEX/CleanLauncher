@@ -32,7 +32,7 @@ public class DialView extends View {
         needle.setStrokeCap(Paint.Cap.ROUND);
         needle.setColor(0xFFFFFFFF);
         glow.setStrokeWidth(10 * d);
-        glow.setColor(0xFF2EE6FF);
+        glow.setColor(0xFFFFE27A);
         glow.setMaskFilter(new BlurMaskFilter(10 * d, BlurMaskFilter.Blur.NORMAL));
     }
 
@@ -47,7 +47,7 @@ public class DialView extends View {
     protected void onDraw(Canvas c) {
         float w = getWidth(), h = getHeight(), pad = 16 * d;
         float base = h * 0.62f;
-        tick.setShader(new LinearGradient(0, 0, w, 0, 0xFF2EE6FF, 0xFFB45CFF, Shader.TileMode.CLAMP));
+        tick.setShader(new LinearGradient(0, 0, w, 0, 0xFFFFE27A, 0xFFB8901F, Shader.TileMode.CLAMP));
 
         for (int f = 8800; f <= MAX; f += 20) {
             float x = x(f, w, pad);

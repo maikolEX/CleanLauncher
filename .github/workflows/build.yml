@@ -2,9 +2,12 @@ name: Build APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, rich6]
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -21,6 +24,26 @@ jobs:
         with:
           packages: "platforms;android-33 build-tools;36.0.0"
 
+      # GHOST GOLD typefaces (SIL Open Font License) from Google Fonts.
+      - name: Fonts
+        run: |
+          mkdir -p assets/fonts
+          base=https://raw.githubusercontent.com/google/fonts/main/ofl
+          curl -sSfL -o assets/fonts/Michroma-Regular.ttf $base/michroma/Michroma-Regular.ttf
+          curl -sSfL -o assets/fonts/Barlow-Light.ttf     $base/barlow/Barlow-Light.ttf
+          curl -sSfL -o assets/fonts/Barlow-Regular.ttf   $base/barlow/Barlow-Regular.ttf
+          curl -sSfL -o assets/fonts/OFL-Michroma.txt     $base/michroma/OFL.txt
+          curl -sSfL -o assets/fonts/OFL-Barlow.txt       $base/barlow/OFL.txt
+
+      # Same key on every build, so a new APK installs over the previous one.
+      - name: Signing key
+        run: |
+          mkdir -p ~/.android
+          if [ -n "$KEYSTORE_B64" ]; then echo "$KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+          else cp ci/debug.keystore ~/.android/debug.keystore; fi
+        env:
+          KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+
       - name: Build
         env:
           BUILD_TOOLS: "36.0.0"
@@ -31,3 +54,17 @@ jobs:
           name: CleanLauncher-${{ github.sha }}
           path: build/CleanLauncher.apk
           if-no-files-found: error
+
+      # Direct download link that works in any browser (also on the radio):
+      # https://github.com/<owner>/<repo>/releases/download/<branch>-latest/GhostGold.apk
+      - name: Publish latest APK
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}-latest
+        run: |
+          cp build/CleanLauncher.apk build/GhostGold.apk
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --prerelease \
+            --target "$GITHUB_SHA" --title "GHOST GOLD · $GITHUB_REF_NAME" --notes "Última versión de la rama $GITHUB_REF_NAME."
+          gh release upload "$TAG" build/GhostGold.apk --clobber
+          gh release edit "$TAG" --notes "Última versión de la rama $GITHUB_REF_NAME · commit ${GITHUB_SHA::7}"
