@@ -188,6 +188,9 @@ public class MainActivity extends Activity implements NowPlaying.Listener {
         int bundled = Profile.bundledCar(this, false), bundledLights = Profile.bundledCar(this, true);
         if (own != null) truck.setCar(own, null);
         else if (bundled != 0) truck.setCarResource(bundled, bundledLights);
+        if (own == null && bundled != 0) {
+            truck.setRearResource(getResources().getIdentifier("car_rear", "drawable", getPackageName()));
+        }
         truck.setNight(createdDark);
         s.addView(truck, new FrameLayout.LayoutParams(-1, -1));
         truck.setOnClickListener(v -> toggleShowroom());

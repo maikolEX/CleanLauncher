@@ -23,6 +23,10 @@ import android.view.animation.LinearInterpolator;
 public class TruckView extends View {
 
     private Bitmap car, lights;
+    private Bitmap rear, carMirror;   // extra views for the showroom turntable
+    private float spin = -1f;         // turntable angle 0..360 (-1 = off)
+    private ValueAnimator spinAnim;
+    private final Paint dot = new Paint(Paint.ANTI_ALIAS_FLAG);
     private float lightsAlpha;
     private float haloStrength = 1f;   // 1 = day, lower at night
     private float pulse;               // showroom breathing 0..1
@@ -61,6 +65,23 @@ public class TruckView extends View {
                 lightsRes == 0 ? null : BitmapFactory.decodeResource(getResources(), lightsRes, o));
     }
 
+    /** Rear photo: with it the showroom turntable shows front, rear and the mirrored front. */
+    void setRearResource(int res) {
+        if (res == 0) return;
+        BitmapFactory.Options o = new BitmapFactory.Options();
+        o.inScaled = false;
+        rear = BitmapFactory.decodeResource(getResources(), res, o);
+    }
+
+    private Bitmap mirror() {
+        if (carMirror == null && car != null) {
+            Matrix f = new Matrix();
+            f.preScale(-1f, 1f);
+            carMirror = Bitmap.createBitmap(car, 0, 0, car.getWidth(), car.getHeight(), f, true);
+        }
+        return carMirror;
+    }
+
     boolean hasLights() {
         return lights != null;
     }
@@ -86,9 +107,11 @@ public class TruckView extends View {
     void setShowroom(boolean on) {
         if (pulseAnim != null) pulseAnim.cancel();
         if (sweepAnim != null) sweepAnim.cancel();
+        if (spinAnim != null) spinAnim.cancel();
         if (!on) {
             pulse = 0;
             sweep = -1f;
+            spin = -1f;
             invalidate();
             return;
         }
@@ -103,6 +126,14 @@ public class TruckView extends View {
         sweepAnim.setInterpolator(new LinearInterpolator());
         sweepAnim.addUpdateListener(v -> { sweep = (float) v.getAnimatedValue(); invalidate(); });
         sweepAnim.start();
+        if (rear != null) {
+            // Turntable: a full turn every 16 s.
+            spinAnim = ValueAnimator.ofFloat(0f, 360f).setDuration(16000);
+            spinAnim.setRepeatCount(ValueAnimator.INFINITE);
+            spinAnim.setInterpolator(new LinearInterpolator());
+            spinAnim.addUpdateListener(v -> { spin = (float) v.getAnimatedValue(); invalidate(); });
+            spinAnim.start();
+        }
     }
 
     /** Where the truck is drawn, for placing the data around it. */
@@ -155,6 +186,16 @@ public class TruckView extends View {
         ring.setColor(alpha(0x2A, k));
         tmp.inset(-fw * 0.12f, -fh * 0.12f);
         c.drawOval(tmp, ring);
+        if (spin >= 0) {
+            // Three gold markers travelling round the turntable rim.
+            float rx = fw * 0.92f, ry = fh * 0.55f;
+            for (int i = 0; i < 3; i++) {
+                double a = Math.toRadians(spin + i * 120);
+                float front = (float) Math.sin(a); // >0 = near side of the platform
+                dot.setColor(alpha(front > 0 ? 0xE6 : 0x55, k));
+                c.drawCircle(cx + (float) Math.cos(a) * rx, fy + front * ry, Ui.dp(getContext(), front > 0 ? 3 : 2), dot);
+            }
+        }
 
         // Mirror reflection fading into the floor.
         float reflH = dst.height() * 0.32f;
@@ -185,7 +226,13 @@ public class TruckView extends View {
         }
     }
 
+    private final RectF fit = new RectF();
+
     private void drawCar(Canvas c) {
+        if (spin >= 0) {
+            drawTurntable(c);
+            return;
+        }
         int base = bmp.getAlpha();
         if (lights != null && lightsAlpha > 0f) {
             bmp.setAlpha(Math.round(base * (1f - lightsAlpha)));
@@ -203,6 +250,43 @@ public class TruckView extends View {
         c.drawBitmap(b, m, bmp);
     }
 
+    /**
+     * Turntable with four views (front, rear, mirrored front, rear). Each view holds while it
+     * narrows a little, then flips edge-on into the next one, like the truck turning.
+     */
+    private void drawTurntable(Canvas c) {
+        Bitmap[] views = {car, rear, mirror(), rear};
+        int seg = (int) (spin / 90f) % 4;
+        float t = (spin % 90f) / 90f;
+        Bitmap b;
+        float sx;
+        if (t < 0.78f) {
+            b = views[seg];
+            sx = 1f - 0.05f * (t / 0.78f);
+        } else if (t < 0.89f) {
+            b = views[seg];
+            float u = (t - 0.78f) / 0.11f;
+            sx = 0.95f * (float) Math.cos(u * Math.PI / 2);
+        } else {
+            b = views[(seg + 1) % 4];
+            float u = (t - 0.89f) / 0.11f;
+            sx = (float) Math.sin(u * Math.PI / 2);
+        }
+        sx = Math.max(0.02f, sx);
+        // Fit each view in the truck box, standing on the same floor line.
+        float ar = b.getWidth() / (float) b.getHeight();
+        float h = b == rear ? dst.height() * 0.88f : dst.height();
+        float w = h * ar;
+        if (w > dst.width()) { w = dst.width(); h = w / ar; }
+        fit.set(dst.centerX() - w / 2f, dst.bottom - h, dst.centerX() + w / 2f, dst.bottom);
+        m.setRectToRect(new RectF(0, 0, b.getWidth(), b.getHeight()), fit, Matrix.ScaleToFit.FILL);
+        m.postScale(sx, 1f, dst.centerX(), 0);
+        int base = bmp.getAlpha();
+        bmp.setAlpha(Math.round(base * (0.55f + 0.45f * sx))); // edge-on = darker
+        c.drawBitmap(b, m, bmp);
+        bmp.setAlpha(base);
+    }
+
     private static int alpha(int a, float k) {
         int v = Math.max(0, Math.min(255, Math.round(a * k)));
         return (v << 24) | 0xD4AF37;
@@ -213,5 +297,6 @@ public class TruckView extends View {
         super.onDetachedFromWindow();
         if (pulseAnim != null) pulseAnim.cancel();
         if (sweepAnim != null) sweepAnim.cancel();
+        if (spinAnim != null) spinAnim.cancel();
     }
 }
